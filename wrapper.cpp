@@ -1,20 +1,17 @@
-#include <boost/python.hpp>
 //#include <boost/numpy.hpp>
 #include <stdio.h>
-#include "Sherwood.h"
+#include "include.h"
 #include "DataPointCollection.h"
 #include "StatisticsAggregators.h"
 #include "FeatureResponseFunctions.h"
 #include "TrainingContexts.h"
 #include "TrainingContexts.cpp"
 #include "Teutoburg.h"
-#include <numpy/ndarrayobject.h>
 
 using namespace boost::python;
 
 namespace sw = MicrosoftResearch::Cambridge::Sherwood;
 namespace bp = boost::python;
-namespace bu = boost::numeric::ublas;
 
 
 int init_numpy()
@@ -62,11 +59,34 @@ namespace Teutoburg
 
         sampleCount = 0;
     }
+
+    GaussianAggregator::GaussianAggregator(int ndims)
+    {
+        this->ndims = ndims;
+
+        npy_intp tmp[2] = {ndims, ndims};
+
+        if(ndims > 0)
+        {
+            PyObject* obj1 = PyArray_ZEROS(2, tmp, NPY_DOUBLE, 0);
+            bp::handle<> arr1(obj1);
+            squares = bp::object(arr1);
+
+            PyObject* obj2 = PyArray_ZEROS(1, tmp, NPY_DOUBLE, 0);
+            bp::handle<> arr2(obj2);
+            mean = bp::object(arr2);
+        }
+
+        sampleCount = 0;
+    }
 }
 
-BOOST_PYTHON_MODULE(sherwood)
+BOOST_PYTHON_MODULE(teutoburg)
 {
     init_numpy();
+
+    Teutoburg::np = bp::import("numpy");
+
     /*
     class_<sw::Node<sw::LinearFeatureResponse2d,sw::HistogramAggregator>>("Node")
         .def_readonly("feature", &sw::Node<sw::LinearFeatureResponse2d,sw::HistogramAggregator>::Feature)
@@ -76,29 +96,55 @@ BOOST_PYTHON_MODULE(sherwood)
     ;
     */
 
-    using F = Teutoburg::LinearFeatureResponse;
-    using S = Teutoburg::HistogramAggregator;
-    def("trainForest", Teutoburg::train<F,S>, return_value_policy<manage_new_object>());
+    {
+        using F = Teutoburg::LinearFeatureResponse;
+        using S = Teutoburg::HistogramAggregator;
+        def("trainClassificationForest", Teutoburg::trainClassification<F,S>, return_value_policy<manage_new_object>());
 
-    class_<Teutoburg::Node<F,S>, boost::noncopyable>("Node", no_init)
-        .add_property("isSplit", &Teutoburg::Node<F,S>::IsSplit)
-        .add_property("isLeaf", &Teutoburg::Node<F,S>::IsLeaf)
-        .add_property("threshold", &Teutoburg::Node<F,S>::GetThreshold)
-        .add_property("feature", &Teutoburg::Node<F,S>::GetFeature)
-        .add_property("statistics", &Teutoburg::Node<F,S>::GetStatistics)
-    ;
+        class_<Teutoburg::Node<F,S>, boost::noncopyable>("Node", no_init)
+            .add_property("isSplit", &Teutoburg::Node<F,S>::IsSplit)
+            .add_property("isLeaf", &Teutoburg::Node<F,S>::IsLeaf)
+            .add_property("threshold", &Teutoburg::Node<F,S>::GetThreshold)
+            .add_property("feature", &Teutoburg::Node<F,S>::GetFeature)
+            .add_property("statistics", &Teutoburg::Node<F,S>::GetStatistics)
+        ;
 
-    class_<Teutoburg::Tree<F,S>, boost::noncopyable>("Tree", no_init)
-        .def("__len__", &Teutoburg::Tree<F,S>::NodeCount)
-        .def("__getitem__", &Teutoburg::Tree<F,S>::GetNode, return_value_policy<manage_new_object>())
-    ;
+        class_<Teutoburg::Tree<F,S>, boost::noncopyable>("Tree", no_init)
+            .def("__len__", &Teutoburg::Tree<F,S>::NodeCount)
+            .def("__getitem__", &Teutoburg::Tree<F,S>::GetNode, return_value_policy<manage_new_object>())
+        ;
 
-    class_<Teutoburg::Forest<F,S>, boost::noncopyable>("Forest", no_init)
-        .def("__len__", &Teutoburg::Forest<F,S>::TreeCount)
-        .def("__getitem__", &Teutoburg::Forest<F,S>::GetTree, return_value_policy<manage_new_object>())
-        .def("__call__", &Teutoburg::Forest<F,S>::Apply) 
-    ;
+        class_<Teutoburg::Forest<F,S>, boost::noncopyable>("Forest", no_init)
+            .def("__len__", &Teutoburg::Forest<F,S>::TreeCount)
+            .def("__getitem__", &Teutoburg::Forest<F,S>::GetTree, return_value_policy<manage_new_object>())
+            .def("__call__", &Teutoburg::Forest<F,S>::Apply)
+        ;
+    }
 
+    {
+        using F = Teutoburg::LinearFeatureResponse;
+        using S = Teutoburg::GaussianAggregator;
+        def("trainRegressionForest", Teutoburg::trainRegression<F,S>, return_value_policy<manage_new_object>());
+
+        class_<Teutoburg::Node<F,S>, boost::noncopyable>("RegressionNode", no_init)
+            .add_property("isSplit", &Teutoburg::Node<F,S>::IsSplit)
+            .add_property("isLeaf", &Teutoburg::Node<F,S>::IsLeaf)
+            .add_property("threshold", &Teutoburg::Node<F,S>::GetThreshold)
+            .add_property("feature", &Teutoburg::Node<F,S>::GetFeature)
+            .add_property("statistics", &Teutoburg::Node<F,S>::GetStatistics)
+        ;
+
+        class_<Teutoburg::Tree<F,S>, boost::noncopyable>("RegressionTree", no_init)
+            .def("__len__", &Teutoburg::Tree<F,S>::NodeCount)
+            .def("__getitem__", &Teutoburg::Tree<F,S>::GetNode, return_value_policy<manage_new_object>())
+        ;
+
+        class_<Teutoburg::Forest<F,S>, boost::noncopyable>("RegressionForest", no_init)
+            .def("__len__", &Teutoburg::Forest<F,S>::TreeCount)
+            .def("__getitem__", &Teutoburg::Forest<F,S>::GetTree, return_value_policy<manage_new_object>())
+            .def("__call__", &Teutoburg::Forest<F,S>::Apply)
+        ;
+    }
 
 /*
     sw::Random rnd;

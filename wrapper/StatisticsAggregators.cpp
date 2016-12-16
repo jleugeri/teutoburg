@@ -1,15 +1,11 @@
 #include "StatisticsAggregators.h"
-
-#include <iostream>
-
 #include "DataPointCollection.h"
-#include "boost/python/object.hpp"
 
 namespace Teutoburg
 {
     bp::object HistogramAggregator::GetPyObject(void)
     {
-        return bins.attr("astype")("float").attr("__mul__")(1.0f/(double)sampleCount);
+        return bins.attr("__mul__")(1.0f/(double)sampleCount);
     }
 
   int HistogramAggregator::getSampleCount() const
@@ -51,7 +47,7 @@ namespace Teutoburg
   void HistogramAggregator::Aggregate(const sw::IDataPointCollection& data, unsigned int index)
   {
       const DataPointCollection& concreteData = (const DataPointCollection&)(data);
-      int label = concreteData.getLabelItem(index);
+      int label = bp::extract<int>(concreteData.getLabelItem(index).attr("item")());
 
       countUp(label);
   }
@@ -65,6 +61,69 @@ namespace Teutoburg
   HistogramAggregator HistogramAggregator::DeepClone() const
   {
       HistogramAggregator result(nClasses);
+      result.Aggregate(*this);
+      return result;
+  }
+
+  bp::object GaussianAggregator::getMean(void) const
+  {
+      return mean.attr("__mul__")(1.0f/(double)sampleCount);
+  }
+
+  bp::object GaussianAggregator::getCovariance(void) const
+  {
+      bp::object m = getMean();
+      bp::object covariance = squares - np.attr("outer")(m,m);
+      return covariance.attr("__mul__")(1.0f/(double)sampleCount);
+  }
+
+    bp::object GaussianAggregator::GetPyObject(void)
+    {
+        //make tuple of mean and covariance
+        return bp::make_tuple(mean.attr("__mul__")(1.0f/(double)sampleCount), getCovariance());
+    }
+
+  int GaussianAggregator::getSampleCount() const
+  {
+      return sampleCount;
+  }
+
+  // IStatisticsAggregator implementation
+  void GaussianAggregator::Clear()
+  {
+      mean.attr("fill")(0);
+      squares.attr("fill")(0);
+      sampleCount = 0;
+  }
+
+  double GaussianAggregator::Entropy() const
+  {
+      // Call numpy determinant function instead
+      double det = bp::extract<double>(np.attr("linalg").attr("det")(getCovariance()));
+      //return log(2*bp::numeric::pi*bp::numeric::e) + 0.5*log(det)
+      return 2.8378770664093453 + 0.5*log(det);
+  }
+
+  void GaussianAggregator::Aggregate(const sw::IDataPointCollection& data, unsigned int index)
+  {
+      const DataPointCollection& concreteData = (const DataPointCollection&)(data);
+      bp::object l = concreteData.getLabelItem(index);
+      // Call numpy outer product function
+      mean.attr("__iadd__")(l);
+      squares.attr("__iadd__")(np.attr("outer")(l,l));
+      ++sampleCount;
+  }
+
+  void GaussianAggregator::Aggregate(const GaussianAggregator& aggregator)
+  {
+      mean.attr("__iadd__")(aggregator.mean);
+      squares.attr("__iadd__")(aggregator.squares);
+      sampleCount += aggregator.sampleCount;
+  }
+
+  GaussianAggregator GaussianAggregator::DeepClone() const
+  {
+      GaussianAggregator result(ndims);
       result.Aggregate(*this);
       return result;
   }

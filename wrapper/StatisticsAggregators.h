@@ -1,24 +1,13 @@
-#pragma once
+#ifndef _STATISTICSAGGREGTORS_H_
+#define _STATISTICSAGGREGTORS_H_
 
 // This file defines some IStatisticsAggregator implementations used by the
 // example code in Classification.h, DensityEstimation.h, etc. Note we
 // represent IStatisticsAggregator instances using simple structs so that all
 // tree data can be stored contiguously in a linear array.
 
-#include <math.h>
-
-#include <limits>
-#include <vector>
-
-#include "Sherwood.h"
-
+#include "include.h"
 #include "DataPointCollection.h"
-#include <boost/numeric/ublas/vector.hpp>
-#include <numpy/ndarrayobject.h>
-
-namespace bp = boost::python;
-namespace bu = boost::numeric::ublas;
-namespace sw = MicrosoftResearch::Cambridge::Sherwood;
 
 namespace Teutoburg
 {
@@ -47,4 +36,34 @@ namespace Teutoburg
 
         HistogramAggregator DeepClone() const;
     };
+
+    class GaussianAggregator: public sw::IStatisticsAggregator<GaussianAggregator>
+    {
+    private:
+        int sampleCount;
+        int ndims;
+        bp::object mean;
+        bp::object squares;
+    public:
+        GaussianAggregator(int ndims=0);
+
+        bp::object getMean(void) const;
+        bp::object getCovariance(void) const;
+        bp::object GetPyObject(void);
+
+        int getSampleCount(void ) const;
+
+        void Clear();
+
+        void Aggregate(const sw::IDataPointCollection& data, unsigned int index);
+
+        void Aggregate(const GaussianAggregator& aggregator);
+
+        double Entropy() const;
+
+        GaussianAggregator DeepClone() const;
+    };
 }
+
+
+#endif /* end of include guard: _STATISTICSAGGREGTORS_H_ */

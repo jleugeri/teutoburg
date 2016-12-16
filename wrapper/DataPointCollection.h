@@ -1,19 +1,8 @@
-#pragma once
+#ifndef _DATAPOINTCOLLECTION_H_
+#define _DATAPOINTCOLLECTION_H_
 
-#include <string>
-#include <vector>
-#include <map>
-#include <memory>
-
-#include "Sherwood.h"
-
-#include <boost/python.hpp>
-#include <boost/numeric/ublas/vector.hpp>
-#include <numpy/ndarrayobject.h>
-
-namespace bp = boost::python;
-namespace bu = boost::numeric::ublas;
-namespace sw = MicrosoftResearch::Cambridge::Sherwood;
+#include "include.h"
+#include "DataPointCollection.h"
 
 namespace Teutoburg {
     /* declare data point collections;
@@ -26,11 +15,14 @@ namespace Teutoburg {
 
     public:
         bp::object getDataItem(int ID) const;
-        int getLabelItem(int ID) const;
+        bp::object getLabelItem(int ID) const;
 
         DataPointCollection(bp::object data, bp::object labels);
         unsigned int Count(void) const;
-        int CountClasses(void) const;
         int CountDims(void) const;
+        int CountClasses(void) const;
+        int CountLabelDims(void) const;
     };
 }
+
+#endif /* end of include guard: _DATAPOINTCOLLECTION_H_ */

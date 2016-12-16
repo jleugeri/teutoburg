@@ -1,8 +1,10 @@
+#ifndef _TEUTOBURG_H_
+#define _TEUTOBURG_H_
+
 #include "Node.h"
-#include "Sherwood.h"
+#include "DataPointCollection.h"
 #include "FeatureResponseFunctions.h"
 #include "StatisticsAggregators.h"
-#include <boost/shared_ptr.hpp>
 
 
 namespace sw = MicrosoftResearch::Cambridge::Sherwood;
@@ -10,6 +12,8 @@ namespace bp = boost::python;
 
 namespace Teutoburg
 {
+    bp::object np;
+
     /* Forward declaration of required classes*/
     template<class F, class S> class Node;
     template<class F, class S> class Tree;
@@ -155,7 +159,7 @@ namespace Teutoburg
 
     // factory that creates forsts objects through training (ger.: "Baumschule" ;) )
     template<class F, class S>// where F : IFeatureResponse where S: IStatisticsAggregator<S>
-    Forest<F,S>* train(bp::object data, bp::object labels, int numTrees, int numFeatures, int numThresholds, int maxLevels, bool verbose)
+    Forest<F,S>* trainClassification(bp::object data, bp::object labels, int numTrees, int numFeatures, int numThresholds, int maxLevels, bool verbose)
     {
         sw::Random rnd;
 
@@ -171,4 +175,25 @@ namespace Teutoburg
         std::auto_ptr<sw::Forest<F,S>> forest = sw::ForestTrainer<F,S>::TrainForest(rnd, p, c, d );
         return new Forest<F,S>(forest);
     }
+
+    // factory that creates forsts objects through training (ger.: "Baumschule" ;) )
+    template<class F, class S>// where F : IFeatureResponse where S: IStatisticsAggregator<S>
+    Forest<F,S>* trainRegression(bp::object data, bp::object labels, int numTrees, int numFeatures, int numThresholds, int maxLevels, bool verbose)
+    {
+        sw::Random rnd;
+
+        sw::TrainingParameters p = sw::TrainingParameters();
+        p.NumberOfTrees = numTrees;
+        p.NumberOfCandidateFeatures = numFeatures;
+        p.NumberOfCandidateThresholdsPerFeature = numThresholds;
+        p.MaxDecisionLevels = maxLevels;
+        p.Verbose = verbose;
+
+        Teutoburg::DataPointCollection d = Teutoburg::DataPointCollection(data, labels);
+        Teutoburg::RegressionTrainingContext<F> c = RegressionTrainingContext<F>(d.CountDims(), d.CountLabelDims());
+        std::auto_ptr<sw::Forest<F,S>> forest = sw::ForestTrainer<F,S>::TrainForest(rnd, p, c, d );
+        return new Forest<F,S>(forest);
+    }
 }
+
+#endif /* end of include guard: _TEUTOBURG_H_ */

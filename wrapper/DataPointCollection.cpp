@@ -1,10 +1,4 @@
 #include "DataPointCollection.h"
-#include <boost/python/tuple.hpp>
-#include <string>
-#include <vector>
-#include <map>
-#include <fstream>
-#include <sstream>
 
 namespace Teutoburg {
     /* Define data point collections */
@@ -21,9 +15,9 @@ namespace Teutoburg {
         return this->data.attr("__getitem__")(ID);
     }
 
-    int DataPointCollection::getLabelItem(int ID) const
+    bp::object DataPointCollection::getLabelItem(int ID) const
     {
-        return bp::extract<int>(this->labels.attr("__getitem__")(ID).attr("item")());
+        return this->labels.attr("__getitem__")(ID);
     }
 
     unsigned int DataPointCollection::Count(void) const
@@ -39,5 +33,10 @@ namespace Teutoburg {
     int DataPointCollection::CountClasses(void) const
     {
         return bp::extract<int>((this->labels.attr("max")().attr("__add__")(1).attr("item")()));
+    }
+
+    int DataPointCollection::CountLabelDims(void) const
+    {
+        return (Count() <= 0) ? (int)0 : (int)bp::extract<int>(this->labels.attr("__getitem__")(0).attr("__len__")());
     }
 }
