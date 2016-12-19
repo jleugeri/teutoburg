@@ -10,18 +10,22 @@ namespace Teutoburg {
     class DataPointCollection: public sw::IDataPointCollection
     {
     private:
-        bp::object data;
-        bp::object labels;
+        unsigned int _Count;
+        unsigned int _CountDims;
+        unsigned int _CountLabelDims;
+        bp::list _data;
 
     public:
-        bp::object getDataItem(int ID) const;
-        bp::object getLabelItem(int ID) const;
+        bp::tuple getItem(unsigned int ID) const;
+        bp::object getDataItem(unsigned int ID) const;
+        bp::object getLabelItem(unsigned int ID) const;
 
-        DataPointCollection(bp::object data, bp::object labels);
+        void addItem(bp::tuple datapoint);
+
+        DataPointCollection(bp::list data);
         unsigned int Count(void) const;
-        int CountDims(void) const;
-        int CountClasses(void) const;
-        int CountLabelDims(void) const;
+        unsigned int CountDims(void) const;
+        unsigned int CountLabelDims(void) const;
     };
 }
 

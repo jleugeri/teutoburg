@@ -44,22 +44,6 @@ namespace Teutoburg
         normal = bp::object(arr);
     }
 
-    HistogramAggregator::HistogramAggregator(int nClasses)
-    {
-        this->nClasses = nClasses;
-
-        npy_intp tmp = nClasses;
-
-        if(nClasses > 0)
-        {
-            PyObject* obj = PyArray_ZEROS(1, &tmp, NPY_INT, 0);
-            bp::handle<> arr(obj);
-            bins = bp::object(arr);
-        }
-
-        sampleCount = 0;
-    }
-
     GaussianAggregator::GaussianAggregator(int ndims)
     {
         this->ndims = ndims;

@@ -3,40 +3,59 @@
 namespace Teutoburg {
     /* Define data point collections */
 
-    DataPointCollection::DataPointCollection(bp::object data, bp::object labels)
+    DataPointCollection::DataPointCollection(bp::list data)
     {
-
-        this->data = data;
-        this->labels = labels;
+        _data = data;
+        _Count = bp::len(_data);
+        if(Count() > 0)
+        {
+            bp::tuple d0 = bp::tuple(_data[0]);
+            _CountDims = bp::len(d0[0]);
+            if(PyObject_HasAttrString(bp::object(d0[1]).ptr(), "__len__"))
+            {
+                _CountLabelDims = bp::len(d0[1]);
+            } else {
+                _CountLabelDims = 0;
+            }
+        } else        {
+            _CountDims = 0;
+            _CountLabelDims = 0;
+        }
     }
 
-    bp::object DataPointCollection::getDataItem(int ID) const
+    void DataPointCollection::addItem(bp::tuple datapoint)
     {
-        return this->data.attr("__getitem__")(ID);
+        _data.append(datapoint);
+        ++_Count;
     }
 
-    bp::object DataPointCollection::getLabelItem(int ID) const
+    bp::object DataPointCollection::getDataItem(unsigned int ID) const
     {
-        return this->labels.attr("__getitem__")(ID);
+        return getItem(ID)[0];
+    }
+
+    bp::object DataPointCollection::getLabelItem(unsigned int ID) const
+    {
+        return getItem(ID)[1];
+    }
+
+    bp::tuple DataPointCollection::getItem(unsigned int ID) const
+    {
+        return (bp::tuple)_data[ID];
     }
 
     unsigned int DataPointCollection::Count(void) const
     {
-        return bp::extract<unsigned int>((this->data.attr("__len__")()));
+        return _Count;
     }
 
-    int DataPointCollection::CountDims(void) const
+    unsigned int DataPointCollection::CountDims(void) const
     {
-        return (Count() <= 0) ? (int)0 : (int)bp::extract<int>(this->data.attr("__getitem__")(0).attr("__len__")());
+        return _CountDims;
     }
 
-    int DataPointCollection::CountClasses(void) const
+    unsigned int DataPointCollection::CountLabelDims(void) const
     {
-        return bp::extract<int>((this->labels.attr("max")().attr("__add__")(1).attr("item")()));
-    }
-
-    int DataPointCollection::CountLabelDims(void) const
-    {
-        return (Count() <= 0) ? (int)0 : (int)bp::extract<int>(this->labels.attr("__getitem__")(0).attr("__len__")());
+        return _CountLabelDims;
     }
 }

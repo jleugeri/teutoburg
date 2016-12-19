@@ -14,15 +14,14 @@ namespace Teutoburg
     class HistogramAggregator: public sw::IStatisticsAggregator<HistogramAggregator>
     {
     private:
-        bp::object bins;
+        bp::dict bins;
         int sampleCount;
-        int nClasses;
     public:
-        HistogramAggregator(int nClasses=0);
+        HistogramAggregator();
 
-        bp::object GetPyObject(void);
+        bp::dict GetPyObject(void);
 
-        inline void countUp(int label, int step=1);
+        inline void countUp(bp::object label, int step=1);
 
         int getSampleCount(void ) const;
 
@@ -37,11 +36,28 @@ namespace Teutoburg
         HistogramAggregator DeepClone() const;
     };
 
+    /* Gaussian Aggregator
+    we assume a linear homoscedastic model with multivariate Gaussian noise
+
+    the linear prediction is determined by:
+        estimating the mean/offset: b_est
+        solving the least squares problem: y_train-b_est = x_train M_est for M_est
+        y_train_est = x_train M_est + b_est
+        y_test_est = x_test M_est + b_est
+    the training residuals are calculated by:
+        r = y_train - y_train_est
+    the covariance of the residuals can be calculated: c_r
+    the entropy is calculated on the residual covariance: E = 0.5*log(det(2*pi*e*c_r))
+
+
+    => WRITE AGGREGATOR THAT COLLECTS ALL DATAPOINTS & LABELS INTO A LIST
+    */
     class GaussianAggregator: public sw::IStatisticsAggregator<GaussianAggregator>
     {
     private:
         int sampleCount;
         int ndims;
+        bp::object all_samples;
         bp::object mean;
         bp::object squares;
     public:

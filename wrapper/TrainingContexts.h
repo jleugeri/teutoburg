@@ -20,7 +20,7 @@ namespace Teutoburg
         int nClasses;
 
     public:
-        ClassificationTrainingContext(int dim, int nClasses);
+        ClassificationTrainingContext(int dim);
 
     // Implementation of ITrainingContext
         F GetRandomFeature(sw::Random& random);

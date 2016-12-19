@@ -4,6 +4,7 @@ import numpy as np
 import teutoburg
 from pylab import *
 import sympy as sp
+from itertools import repeat
 
 num_clusters = 3
 num_data_per_cluster = 100
@@ -120,10 +121,11 @@ y = np.linspace(training_data[:, 1].min(), training_data[:, 1].max(), npp)
 xx,yy = np.meshgrid(x, y)
 test_data = np.hstack([xx.reshape((-1, 1)), yy.reshape((-1, 1))])
 
-f = teutoburg.trainClassificationForest(training_data, training_labels, num_trees, num_features, numThresholds, num_lvls, verbose)
+f = teutoburg.trainClassificationForest(list(zip(training_data, training_labels)), num_trees, num_features, numThresholds, num_lvls, verbose)
 
-res  = f(test_data)
+res  = f(list(zip(test_data, repeat(None))))
 
+res = [np.array([r[0], r[1], r[2]],dtype=float)/(r[0]+r[1]+r[2]) for r in res]
 
 #figure()
 ax = subplot(111)

@@ -118,11 +118,11 @@ namespace Teutoburg
 
         }*/
 
-        bp::list Apply(bp::object data)
+        bp::list Apply(bp::list data)
         {
             std::vector<std::vector<int>> leafNodeIndices;
             std::vector<S> all_stats;
-            DataPointCollection d = DataPointCollection(data, bp::object());
+            DataPointCollection d = DataPointCollection(data);
             forest_->Apply(d, leafNodeIndices);
 
             int t=0;
@@ -159,7 +159,7 @@ namespace Teutoburg
 
     // factory that creates forsts objects through training (ger.: "Baumschule" ;) )
     template<class F, class S>// where F : IFeatureResponse where S: IStatisticsAggregator<S>
-    Forest<F,S>* trainClassification(bp::object data, bp::object labels, int numTrees, int numFeatures, int numThresholds, int maxLevels, bool verbose)
+    Forest<F,S>* trainClassification(bp::list data, int numTrees, int numFeatures, int numThresholds, int maxLevels, bool verbose)
     {
         sw::Random rnd;
 
@@ -170,15 +170,15 @@ namespace Teutoburg
         p.MaxDecisionLevels = maxLevels;
         p.Verbose = verbose;
 
-        Teutoburg::DataPointCollection d = Teutoburg::DataPointCollection(data, labels);
-        Teutoburg::ClassificationTrainingContext<F> c = ClassificationTrainingContext<F>(d.CountDims(), d.CountClasses());
+        Teutoburg::DataPointCollection d = Teutoburg::DataPointCollection(data);
+        Teutoburg::ClassificationTrainingContext<F> c = ClassificationTrainingContext<F>(d.CountDims());
         std::auto_ptr<sw::Forest<F,S>> forest = sw::ForestTrainer<F,S>::TrainForest(rnd, p, c, d );
         return new Forest<F,S>(forest);
     }
 
     // factory that creates forsts objects through training (ger.: "Baumschule" ;) )
     template<class F, class S>// where F : IFeatureResponse where S: IStatisticsAggregator<S>
-    Forest<F,S>* trainRegression(bp::object data, bp::object labels, int numTrees, int numFeatures, int numThresholds, int maxLevels, bool verbose)
+    Forest<F,S>* trainRegression(bp::list data, int numTrees, int numFeatures, int numThresholds, int maxLevels, bool verbose)
     {
         sw::Random rnd;
 
@@ -189,7 +189,7 @@ namespace Teutoburg
         p.MaxDecisionLevels = maxLevels;
         p.Verbose = verbose;
 
-        Teutoburg::DataPointCollection d = Teutoburg::DataPointCollection(data, labels);
+        Teutoburg::DataPointCollection d = Teutoburg::DataPointCollection(data);
         Teutoburg::RegressionTrainingContext<F> c = RegressionTrainingContext<F>(d.CountDims(), d.CountLabelDims());
         std::auto_ptr<sw::Forest<F,S>> forest = sw::ForestTrainer<F,S>::TrainForest(rnd, p, c, d );
         return new Forest<F,S>(forest);

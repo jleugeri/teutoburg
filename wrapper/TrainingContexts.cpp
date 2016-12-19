@@ -19,9 +19,8 @@ namespace Teutoburg
     }
 
     template <class F>
-    ClassificationTrainingContext<F>::ClassificationTrainingContext(int dim, int nClasses)
+    ClassificationTrainingContext<F>::ClassificationTrainingContext(int dim)
     {
-        this->nClasses = nClasses;
         this->dim = dim;
     }
 
@@ -34,7 +33,7 @@ namespace Teutoburg
     template <class F>
     HistogramAggregator ClassificationTrainingContext<F>::GetStatisticsAggregator(void)
     {
-        return HistogramAggregator(nClasses);
+        return HistogramAggregator();
     }
 
     template <class F>

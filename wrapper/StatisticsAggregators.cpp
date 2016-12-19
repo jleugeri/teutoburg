@@ -3,9 +3,15 @@
 
 namespace Teutoburg
 {
-    bp::object HistogramAggregator::GetPyObject(void)
+    HistogramAggregator::HistogramAggregator()
     {
-        return bins.attr("__mul__")(1.0f/(double)sampleCount);
+        bins = bp::dict();
+        sampleCount = 0;
+    }
+
+    bp::dict HistogramAggregator::GetPyObject(void)
+    {
+        return bins;
     }
 
   int HistogramAggregator::getSampleCount() const
@@ -16,13 +22,13 @@ namespace Teutoburg
   // IStatisticsAggregator implementation
   void HistogramAggregator::Clear()
   {
-      bins.attr("fill")(0);
+      bins = bp::dict();
       sampleCount = 0;
   }
 
-  inline void HistogramAggregator::countUp(int label, int step)
+  inline void HistogramAggregator::countUp(bp::object label, int step)
   {
-      bins.attr("__setitem__")(label, step+bp::extract<int>(bins.attr("__getitem__")(label).attr("item")()));
+      bins[label] = int(bp::extract<int>(bins.setdefault(label,0))) + step;
       sampleCount += step;
   }
 
@@ -30,12 +36,13 @@ namespace Teutoburg
   {
       double result = 0.0;
 
-      for(int i=0; i<nClasses; ++i)
+      bp::list vals = bins.values();
+      for(int i=0; i<bp::len(vals); ++i)
       {
-          double val= (double) bp::extract<int>( bins.attr("__getitem__")(i).attr("item")());
-          if(val!=0.0)
+          double val= bp::extract<int>(vals[i]);
+          if(val>0.0)
           {
-              val /= (double)sampleCount;
+              val /= double(sampleCount);
               result -= val*log2(val);
           }
 
@@ -47,20 +54,24 @@ namespace Teutoburg
   void HistogramAggregator::Aggregate(const sw::IDataPointCollection& data, unsigned int index)
   {
       const DataPointCollection& concreteData = (const DataPointCollection&)(data);
-      int label = bp::extract<int>(concreteData.getLabelItem(index).attr("item")());
+      bp::object label = concreteData.getLabelItem(index);
 
       countUp(label);
   }
 
   void HistogramAggregator::Aggregate(const HistogramAggregator& aggregator)
   {
-      bins.attr("__iadd__")(aggregator.bins);
+      bp::list keys = aggregator.bins.keys();
+      for(int i=0; i<bp::len(keys); ++i)
+      {
+          countUp(keys[i], bp::extract<int>(aggregator.bins[keys[i]]));
+      }
       sampleCount += aggregator.sampleCount;
   }
 
   HistogramAggregator HistogramAggregator::DeepClone() const
   {
-      HistogramAggregator result(nClasses);
+      HistogramAggregator result;
       result.Aggregate(*this);
       return result;
   }
