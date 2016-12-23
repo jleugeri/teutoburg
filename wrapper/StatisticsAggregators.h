@@ -21,6 +21,8 @@ namespace Teutoburg
 
         bp::dict GetPyObject(void);
 
+        bp::tuple GetResponse(bp::object inp) const;
+
         inline void countUp(bp::object label, int step=1);
 
         int getSampleCount(void ) const;
@@ -55,29 +57,28 @@ namespace Teutoburg
     class GaussianAggregator: public sw::IStatisticsAggregator<GaussianAggregator>
     {
     private:
-        int sampleCount;
-        int ndims;
-        bp::object all_samples;
-        bp::object mean;
-        bp::object squares;
+        unsigned int sampleCount;
+        unsigned int data_dims;
+        unsigned int label_dims;
+        bool uptodate;
+        bp::object M;
+        bp::object ATA;
+        bp::object ATy;
+        bp::object yTy;
     public:
-        GaussianAggregator(int ndims=0);
+        GaussianAggregator(unsigned int data_dims=0, unsigned int label_dims=0);
 
-        bp::object getMean(void) const;
-        bp::object getCovariance(void) const;
-        bp::object GetPyObject(void);
-
+        double Entropy() const;
         int getSampleCount(void ) const;
 
         void Clear();
-
         void Aggregate(const sw::IDataPointCollection& data, unsigned int index);
-
-        void Aggregate(const GaussianAggregator& aggregator);
-
-        double Entropy() const;
-
+        void Aggregate(const GaussianAggregator& other);
         GaussianAggregator DeepClone() const;
+
+        void update();
+        bp::object GetPyObject(void) const;
+        bp::tuple GetResponse(bp::object inp) const;
     };
 }
 

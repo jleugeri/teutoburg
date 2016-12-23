@@ -7,7 +7,7 @@ namespace Teutoburg {
     {
         _data = data;
         _Count = bp::len(_data);
-        if(Count() > 0)
+        if(_Count > 0)
         {
             bp::tuple d0 = bp::tuple(_data[0]);
             _CountDims = bp::len(d0[0]);

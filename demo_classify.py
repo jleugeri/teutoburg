@@ -125,12 +125,20 @@ f = teutoburg.trainClassificationForest(list(zip(training_data, training_labels)
 
 res  = f(list(zip(test_data, repeat(None))))
 
-res = [np.array([r[0], r[1], r[2]],dtype=float)/(r[0]+r[1]+r[2]) for r in res]
+hists = []
+for d_resp in res:
+    hist = 0
+    n = 0
+    for l, r in d_resp:
+        hist += np.array([r.get(0, 0), r.get(1, 0), r.get(2, 0)], dtype=float)/(r.get(0, 1)+r.get(1, 1)+r.get(2, 1))
+        n += 1
+    hist /= n;
+    hists.append(hist)
 
 #figure()
 ax = subplot(111)
 #scatter(test_data[:, 0], test_data[:, 1], marker='x', color=res)
-imshow(np.array(res).reshape((npp,npp,3)), extent=(x.min(), x.max(), y.min(), y.max()), origin="lower")
+imshow(np.array(hists).reshape((npp,npp,3)), extent=(x.min(), x.max(), y.min(), y.max()), origin="lower")
 
 plot(training_data[   :100, 0], training_data[   :100, 1], 'ro')
 plot(training_data[100:200, 0], training_data[100:200, 1], 'go')

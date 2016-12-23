@@ -44,6 +44,7 @@ namespace Teutoburg
         normal = bp::object(arr);
     }
 
+    /*
     GaussianAggregator::GaussianAggregator(int ndims)
     {
         this->ndims = ndims;
@@ -63,6 +64,7 @@ namespace Teutoburg
 
         sampleCount = 0;
     }
+    */
 }
 
 BOOST_PYTHON_MODULE(teutoburg)

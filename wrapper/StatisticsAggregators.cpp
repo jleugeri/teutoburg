@@ -9,6 +9,22 @@ namespace Teutoburg
         sampleCount = 0;
     }
 
+    bp::tuple HistogramAggregator::GetResponse(bp::object inp) const
+    {
+        bp::object keys = bins.keys();
+        int max_val = 0;
+        bp::object max_key;
+        for(int i=0; i<bp::len(keys); ++i)
+        {
+            if(max_val<bp::extract<int>(bins[keys[i]]))
+            {
+                max_val = bp::extract<int>(bins[keys[i]]);
+                max_key = keys[i];
+            }
+        }
+        return bp::make_tuple(max_key, bins);
+    }
+
     bp::dict HistogramAggregator::GetPyObject(void)
     {
         return bins;
@@ -76,66 +92,121 @@ namespace Teutoburg
       return result;
   }
 
-  bp::object GaussianAggregator::getMean(void) const
-  {
-      return mean.attr("__mul__")(1.0f/(double)sampleCount);
-  }
 
-  bp::object GaussianAggregator::getCovariance(void) const
-  {
-      bp::object m = getMean();
-      bp::object covariance = squares - np.attr("outer")(m,m);
-      return covariance.attr("__mul__")(1.0f/(double)sampleCount);
-  }
-
-    bp::object GaussianAggregator::GetPyObject(void)
+    /* GaussianAggregator */
+    GaussianAggregator::GaussianAggregator(unsigned int data_dims, unsigned int label_dims)
     {
-        //make tuple of mean and covariance
-        return bp::make_tuple(mean.attr("__mul__")(1.0f/(double)sampleCount), getCovariance());
+        this->data_dims = data_dims;
+        this->label_dims = label_dims;
+
+        ATy = bp::object(np.attr("zeros")(bp::make_tuple(data_dims+1, label_dims)));
+        ATA = bp::object(np.attr("zeros")(bp::make_tuple(data_dims+1, data_dims+1)));
+        yTy = bp::object(np.attr("zeros")(bp::make_tuple(label_dims, label_dims)));
+        uptodate = false;
+        sampleCount = 0;
     }
 
-  int GaussianAggregator::getSampleCount() const
-  {
-      return sampleCount;
-  }
+    /*
+    double GaussianAggregator::Entropy() const
+    {
+        // Call numpy determinant function instead
+        double det = bp::extract<double>(np.attr("linalg").attr("det")(cov));
+        //return log(2*bp::numeric::pi*bp::numeric::e) + 0.5*log(det)
+        return 2.8378770664093453 + 0.5*log(det);
+    }
+    */
 
-  // IStatisticsAggregator implementation
-  void GaussianAggregator::Clear()
-  {
-      mean.attr("fill")(0);
-      squares.attr("fill")(0);
-      sampleCount = 0;
-  }
+    int GaussianAggregator::getSampleCount(void ) const
+    {
+        return sampleCount;
+    }
 
-  double GaussianAggregator::Entropy() const
-  {
-      // Call numpy determinant function instead
-      double det = bp::extract<double>(np.attr("linalg").attr("det")(getCovariance()));
-      //return log(2*bp::numeric::pi*bp::numeric::e) + 0.5*log(det)
-      return 2.8378770664093453 + 0.5*log(det);
-  }
+    void GaussianAggregator::Clear()
+    {
+        ATA.attr("fill")(0);
+        ATy.attr("fill")(0);
+        yTy.attr("fill")(0);
+        sampleCount = 0;
+        uptodate = false;
+    };
 
-  void GaussianAggregator::Aggregate(const sw::IDataPointCollection& data, unsigned int index)
-  {
-      const DataPointCollection& concreteData = (const DataPointCollection&)(data);
-      bp::object l = concreteData.getLabelItem(index);
-      // Call numpy outer product function
-      mean.attr("__iadd__")(l);
-      squares.attr("__iadd__")(np.attr("outer")(l,l));
-      ++sampleCount;
-  }
+    void GaussianAggregator::Aggregate(const sw::IDataPointCollection& data, unsigned int index)
+    {
+        const DataPointCollection& concreteData = (const DataPointCollection&)(data);
 
-  void GaussianAggregator::Aggregate(const GaussianAggregator& aggregator)
-  {
-      mean.attr("__iadd__")(aggregator.mean);
-      squares.attr("__iadd__")(aggregator.squares);
-      sampleCount += aggregator.sampleCount;
-  }
+        // update all variables
+        uptodate = false;
+        ++sampleCount;
+        bp::tuple item = concreteData.getItem(index);
+        bp::object xx = np.attr("hstack")(bp::make_tuple(item[0], 1));
+        bp::object yy = item[1];
 
-  GaussianAggregator GaussianAggregator::DeepClone() const
-  {
-      GaussianAggregator result(ndims);
-      result.Aggregate(*this);
-      return result;
-  }
+        ATA.attr("__iadd__")(np.attr("outer")(xx, xx));
+        ATy.attr("__iadd__")(np.attr("outer")(xx, yy));
+        yTy.attr("__iadd__")(np.attr("outer")(yy, yy));
+    };
+
+    void GaussianAggregator::Aggregate(const GaussianAggregator& other)
+    {
+        sampleCount += other.sampleCount;
+        uptodate = false;
+        ATA.attr("__iadd__")(other.ATA);
+        ATy.attr("__iadd__")(other.ATy);
+        yTy.attr("__iadd__")(other.yTy);
+    };
+
+    void GaussianAggregator::update()
+    {
+        if(!uptodate)
+        {
+            M = np.attr("linalg").attr("solve")(ATA, ATy);
+            uptodate = true;
+        }
+    }
+
+    bp::object GaussianAggregator::GetPyObject() const
+    {
+        //update();
+        return np.attr("linalg").attr("solve")(ATA, ATy);
+    }
+
+    double GaussianAggregator::Entropy() const
+    {
+        //update();
+        if(sampleCount<=1)
+        {
+            return 0;
+        }
+
+        bp::object M = np.attr("linalg").attr("solve")(ATA, ATy);
+        bp::object MTATy = M.attr("T").attr("dot")(ATy);
+        bp::object c= (((yTy.attr("__sub__")(MTATy)).attr("__sub__")(bp::object(MTATy.attr("T")))).attr("__add__")((M.attr("T").attr("dot")(ATA)).attr("dot")(M))).attr("__mul__")(1.0/(double)sampleCount);
+
+        double E;
+        if(bp::extract<int>(c.attr("ndim")) > 1)
+        {
+            E = 0.5*log(bp::extract<double>(np.attr("linalg").attr("det")(c.attr("__mul__")(2*bc::pi<double>()*bc::e<double>()))));
+        } else
+        {
+            E = 0.5*log(bp::extract<double>(c.attr("__mul__")(2*bc::pi<double>()*bc::e<double>())));
+        }
+        return E;
+    }
+
+    GaussianAggregator GaussianAggregator::DeepClone() const
+    {
+        GaussianAggregator result(data_dims, label_dims);
+        result.Aggregate(*this);
+        return result;
+    };
+
+    bp::tuple GaussianAggregator::GetResponse(bp::object inp) const
+    {
+        bp::object xx = np.attr("hstack")(bp::make_tuple(inp, 1));
+        bp::object M = np.attr("linalg").attr("solve")(ATA, ATy);
+        bp::object MTATy = M.attr("T").attr("dot")(ATy);
+        bp::object c= (((yTy.attr("__sub__")(MTATy)).attr("__sub__")(bp::object(MTATy.attr("T")))).attr("__add__")((M.attr("T").attr("dot")(ATA)).attr("dot")(M))).attr("__mul__")(1.0/(double)sampleCount);
+        return bp::make_tuple(xx.attr("dot")(M), c);
+    }
+
 }

@@ -57,6 +57,8 @@ namespace Teutoburg
 
         double entropyAfter = (leftStatistics.getSampleCount() * leftStatistics.Entropy() + rightStatistics.getSampleCount() * rightStatistics.Entropy()) / nTotalSamples;
 
+        //std::cout << "Before: " << entropyBefore << " Left: " << leftStatistics.Entropy() << "(" << leftStatistics.getSampleCount() << ")" << " Right: " << rightStatistics.Entropy() << "(" << rightStatistics.getSampleCount() << ")";
+
         return entropyBefore - entropyAfter;
     }
 
@@ -76,7 +78,7 @@ namespace Teutoburg
     template <class F>
     GaussianAggregator RegressionTrainingContext<F>::GetStatisticsAggregator(void)
     {
-        return GaussianAggregator(dim_labels);
+        return GaussianAggregator(dim_data,  dim_labels);
     }
 
     template <class F>

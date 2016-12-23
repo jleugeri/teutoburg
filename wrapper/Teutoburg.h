@@ -61,6 +61,11 @@ namespace Teutoburg
         {
             return node_->TrainingDataStatistics.GetPyObject();
         }
+
+        bp::object GetResponse(bp::object inp) const
+        {
+            return node_->TrainingDataStatistics.GetResponse(inp);
+        }
     };
 
     template<class F, class S>
@@ -121,7 +126,7 @@ namespace Teutoburg
         bp::list Apply(bp::list data)
         {
             std::vector<std::vector<int>> leafNodeIndices;
-            std::vector<S> all_stats;
+            bp::list all_stats;
             DataPointCollection d = DataPointCollection(data);
             forest_->Apply(d, leafNodeIndices);
 
@@ -137,23 +142,14 @@ namespace Teutoburg
                 {
                     if(t==0)
                     {
-                        S stats = forest_->GetTree(t).GetNode(*it2).TrainingDataStatistics.DeepClone();
-                        all_stats.push_back(stats);
+                        bp::list tree_stats;
+                        all_stats.append(tree_stats);
                     }
-                    else
-                    {
-                        all_stats[k].Aggregate(forest_->GetTree(t).GetNode(*it2).TrainingDataStatistics);
-                    }
+                    all_stats[k].attr("append")(forest_->GetTree(t).GetNode(*it2).TrainingDataStatistics.GetResponse(d.getDataItem(k)));
                 }
             }
 
-            bp::list all_stats_py;
-            for(typename std::vector<S>::iterator it = all_stats.begin(); it!=all_stats.end(); ++it)
-            {
-                all_stats_py.append(it->GetPyObject());
-            }
-
-            return all_stats_py;
+            return all_stats;
         }
     };
 
@@ -192,6 +188,7 @@ namespace Teutoburg
         Teutoburg::DataPointCollection d = Teutoburg::DataPointCollection(data);
         Teutoburg::RegressionTrainingContext<F> c = RegressionTrainingContext<F>(d.CountDims(), d.CountLabelDims());
         std::auto_ptr<sw::Forest<F,S>> forest = sw::ForestTrainer<F,S>::TrainForest(rnd, p, c, d );
+
         return new Forest<F,S>(forest);
     }
 }
